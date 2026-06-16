@@ -4,6 +4,7 @@ const VALID_STYLES = ['minimal', 'flat', 'vintage', '3D', 'mascot', 'lettermark'
 const VALID_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const MAX_NAME_LENGTH = 120;
+const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_SYSTEM_PROMPT_LENGTH = 4000;
 const MAX_QUESTIONS = 20;
 const MAX_QUESTION_LABEL_LENGTH = 200;
@@ -92,6 +93,7 @@ function templateFromRow(row) {
   return {
     id: row.id,
     name: row.name,
+    description: row.description ?? '',
     systemPrompt: row.system_prompt,
     questions: JSON.parse(row.questions),
     size: row.size ?? '1024x1024',
@@ -104,6 +106,7 @@ function templateSummaryFromRow(row) {
   return {
     id: row.id,
     name: row.name,
+    description: row.description ?? '',
     questions: JSON.parse(row.questions),
     size: row.size ?? '1024x1024',
     referenceType: row.reference_type,
@@ -113,7 +116,7 @@ function templateSummaryFromRow(row) {
 
 async function getTemplateRow(env, id) {
   const result = await env.DB.prepare(
-    'SELECT id, name, system_prompt, questions, reference_key, reference_type, size, created_at FROM templates WHERE id = ?',
+    'SELECT id, name, description, system_prompt, questions, reference_key, reference_type, size, created_at FROM templates WHERE id = ?',
   )
     .bind(id)
     .first();
@@ -249,6 +252,7 @@ function referenceExtension(mimeType) {
 
 function parseTemplateFormData(formData, { requireImage = true } = {}) {
   const name = formData.get('name');
+  const description = formData.get('description');
   const systemPrompt = formData.get('systemPrompt');
   const questionsRaw = formData.get('questions');
   const image = formData.get('image');
@@ -264,6 +268,16 @@ function parseTemplateFormData(formData, { requireImage = true } = {}) {
 
   if (name.trim().length > MAX_NAME_LENGTH) {
     return { error: `Template name must be ${MAX_NAME_LENGTH} characters or fewer.` };
+  }
+
+  if (typeof description !== 'string' || description.trim().length === 0) {
+    return { error: 'Description is required.' };
+  }
+
+  if (description.trim().length > MAX_DESCRIPTION_LENGTH) {
+    return {
+      error: `Description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer.`,
+    };
   }
 
   if (typeof systemPrompt !== 'string' || systemPrompt.trim().length === 0) {
@@ -306,6 +320,7 @@ function parseTemplateFormData(formData, { requireImage = true } = {}) {
 
   return {
     name: name.trim(),
+    description: description.trim(),
     systemPrompt: systemPrompt.trim(),
     questions,
     size,
@@ -336,7 +351,7 @@ async function handleCreateTemplate(request, env) {
     return json({ error: parsed.error }, 400);
   }
 
-  const { name, systemPrompt, questions, size, image } = parsed;
+  const { name, description, systemPrompt, questions, size, image } = parsed;
   const id = crypto.randomUUID();
   const referenceKey = `templates/${id}/reference.${referenceExtension(image.type)}`;
   const createdAt = Date.now();
@@ -348,12 +363,13 @@ async function handleCreateTemplate(request, env) {
 
     await env.DB.prepare(
       `INSERT INTO templates (
-        id, name, system_prompt, questions, reference_key, reference_type, size, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, name, description, system_prompt, questions, reference_key, reference_type, size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
         name,
+        description,
         systemPrompt,
         JSON.stringify(questions),
         referenceKey,
@@ -367,6 +383,7 @@ async function handleCreateTemplate(request, env) {
       template: {
         id,
         name,
+        description,
         systemPrompt,
         questions,
         size,
@@ -410,7 +427,7 @@ async function handleUpdateTemplate(request, env, id) {
       return json({ error: 'Template not found.' }, 404);
     }
 
-    const { name, systemPrompt, questions, size, image } = parsed;
+    const { name, description, systemPrompt, questions, size, image } = parsed;
     let referenceKey = row.reference_key;
     let referenceType = row.reference_type;
 
@@ -429,16 +446,17 @@ async function handleUpdateTemplate(request, env, id) {
 
     await env.DB.prepare(
       `UPDATE templates
-       SET name = ?, system_prompt = ?, questions = ?, reference_key = ?, reference_type = ?, size = ?
+       SET name = ?, description = ?, system_prompt = ?, questions = ?, reference_key = ?, reference_type = ?, size = ?
        WHERE id = ?`,
     )
-      .bind(name, systemPrompt, JSON.stringify(questions), referenceKey, referenceType, size, id)
+      .bind(name, description, systemPrompt, JSON.stringify(questions), referenceKey, referenceType, size, id)
       .run();
 
     return json({
       template: {
         id,
         name,
+        description,
         systemPrompt,
         questions,
         size,
@@ -459,7 +477,7 @@ async function handleListTemplates(_request, env) {
 
   try {
     const result = await env.DB.prepare(
-      'SELECT id, name, questions, reference_type, size, created_at FROM templates ORDER BY created_at DESC',
+      'SELECT id, name, description, questions, reference_type, size, created_at FROM templates ORDER BY created_at DESC',
     ).all();
 
     const templates = (result.results ?? []).map(templateSummaryFromRow);

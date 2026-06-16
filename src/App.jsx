@@ -122,6 +122,7 @@ export default function App() {
   const [answers, setAnswers] = useState({});
 
   const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [questions, setQuestions] = useState([createQuestion('Brand / company name')]);
   const [templateSize, setTemplateSize] = useState('1024x1024');
@@ -230,6 +231,7 @@ export default function App() {
   function resetTemplateForm() {
     setEditingTemplateId(null);
     setTemplateName('');
+    setTemplateDescription('');
     setSystemPrompt('');
     setQuestions([createQuestion('Brand / company name')]);
     setTemplateSize('1024x1024');
@@ -351,6 +353,7 @@ export default function App() {
       resetTemplateForm();
       setEditingTemplateId(template.id);
       setTemplateName(full.name);
+      setTemplateDescription(full.description ?? '');
       setSystemPrompt(full.systemPrompt);
       setTemplateSize(full.size ?? '1024x1024');
       setQuestions(full.questions.map((question) => ({ ...question })));
@@ -397,6 +400,7 @@ export default function App() {
 
     const formData = new FormData();
     formData.append('name', templateName.trim());
+    formData.append('description', templateDescription.trim());
     formData.append('systemPrompt', systemPrompt.trim());
     formData.append('size', templateSize);
     formData.append(
@@ -508,6 +512,7 @@ export default function App() {
 
   const saveValid =
     templateName.trim() &&
+    templateDescription.trim() &&
     systemPrompt.trim() &&
     (editingTemplateId || referenceFile) &&
     questions.every((question) => question.label.trim());
@@ -642,6 +647,17 @@ export default function App() {
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder="e.g. Minimal wordmark refresh"
+                  required
+                />
+              </label>
+
+              <label className="field">
+                <span>Description *</span>
+                <textarea
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  placeholder="What this template is for…"
+                  rows={3}
                   required
                 />
               </label>
@@ -782,6 +798,7 @@ export default function App() {
                       />
                       <div className="template-card__content">
                         <h3>{template.name}</h3>
+                        <p className="template-card__description">{template.description}</p>
                         <p>{template.questions.length} question{template.questions.length === 1 ? '' : 's'}</p>
                       </div>
                     </button>
@@ -831,12 +848,14 @@ export default function App() {
             <button type="button" className="back-btn" onClick={() => switchView('templates')}>
               ← Back to templates
             </button>
-            <h2>{selectedTemplate.name}</h2>
+            <h2 style={{ marginBottom: 0 }}>{selectedTemplate.name}</h2>
+            <p className="panel-intro">{selectedTemplate.description}</p>
             <div className="template-use-preview">
               <img
                 src={`/api/templates/${selectedTemplate.id}/reference`}
                 alt={`${selectedTemplate.name} reference`}
               />
+              <small>Reference image</small>
             </div>
 
             <form onSubmit={handleTemplateGenerate}>
