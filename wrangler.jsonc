@@ -1,0 +1,23 @@
+{
+  "name": "logogen",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-06-01",
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "logogen_db",
+      "database_id": "77296745-3a83-44b5-bdf4-66bec8512e12",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "TEMPLATE_ASSETS",
+      "bucket_name": "logogen-template-assets"
+    }
+  ]
+}
