@@ -1,4 +1,4 @@
-import { downloadImage } from '../utils/download.js';
+import { downloadTrimmedPng } from '../utils/download.js';
 
 export default function ResultsPanel({ loading, images, error, emptyMessage }) {
   return (
@@ -27,7 +27,7 @@ export default function ResultsPanel({ loading, images, error, emptyMessage }) {
                 type="button"
                 className="download-btn"
                 onClick={() =>
-                  downloadImage(src, `logo-${Date.now()}-${i + 1}.png`)
+                  downloadTrimmedPng(src, `logo-${Date.now()}-${i + 1}.png`)
                 }
               >
                 Download PNG
